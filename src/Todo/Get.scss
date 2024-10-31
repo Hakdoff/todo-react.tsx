@@ -1,0 +1,303 @@
+.header {
+    background-color: #FF87CA;
+    height: auto;
+
+}
+
+.appbar {
+    &__tasks {
+        padding: 15px 15%;
+    }
+
+    &__title {
+        text-align: center;
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: white;
+    }
+
+    &__hr {
+        margin: 0px 0px;
+    }
+
+    &__sub-title {
+        font-size: 2rem;
+        font-weight: 600;
+        color: white;
+        text-align: center;
+    }
+}
+
+.body {
+    display: flex;
+    flex-direction: row;
+    margin: 15px;
+    padding: 15px 5%;
+    gap: 30px;
+
+    &__row-title {
+        font-size: 2.5rem;
+    }
+
+    &__row {
+        padding: 10px 30px;
+        gap: 2rem;
+    }
+
+    &__card {
+        display: flex;
+        padding: 10px 0;
+        flex-direction: column;
+        color: black;
+        width: 70%;
+
+        &__title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        &__desc {
+            font-size: medium;
+            font-weight: 400;
+            word-wrap: break-word;
+            word-wrap: break-word;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        &__left {
+            display: flex;
+            width: 90%;
+            cursor: pointer;
+            
+        }
+
+        &__right {
+            display: flex;
+            width: 10%;
+        }
+    }
+
+    &__list-container {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        justify-content: space-between;
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        padding: 10px;
+        gap: 10px;
+        overflow: hidden;
+        height: 100px;
+    }
+
+    &__lists {
+        width: 30%;
+        align-items: stretch;
+    }
+
+
+    &__goals {
+        width: 20%;
+    }
+
+    &__todo {
+        width: 60%;
+    }
+
+    &__calendar {
+        width: 20%;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    &__icons-container {
+        display: flex;
+        flex-direction: row;
+        padding: 10px;
+        justify-content: end;
+        gap: .5rem;
+        width: 10%;
+    }
+
+    &__title-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0 10px;
+
+    }
+}
+
+.body__card.Completed {
+    color: gray;
+    text-decoration: line-through;
+}
+
+.footer {
+    padding: 15px 15%;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.scrollable-section {
+    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    margin: 15px;
+}
+
+.goals {
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    padding: 10px;
+
+    &__title-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+
+    }
+
+    &__title {
+        font-size: 1.5rem;
+    }
+
+    &__lists {
+        margin: 10px;
+    }
+
+    &__list-title-container {
+        width: 60%;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+
+    &__list-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        border: 2px solid #ccc;
+        border-radius: 10px;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    &__icons-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: end;
+        gap: .5rem;
+        width: 40%;
+    }
+
+    &__input {
+        display: block;
+        width: 80%;
+        height: 40px;
+        font-size: 1rem;
+        line-height: 1.5;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out
+    }
+
+    &__label {
+        margin-bottom: 0px;
+        width: 25%;
+    }
+
+    &__input-container {
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    &__add-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin: 20px 0;
+        justify-content: center;
+        padding: 0 70px;
+    }
+}
+
+.calendar-container {
+    max-width: 400px;
+    margin: auto;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    background-color: #fafafa;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.react-calendar {
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.react-calendar__navigation button {
+    color: #007BFF;
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 5px;
+    padding: 5px;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.react-calendar__tile {
+    background-color: #fff;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 1em;
+    font-weight: 400;
+    color: #333;
+    transition: 0.3s ease;
+}
+
+.react-calendar__tile--active {
+    background-color: #007BFF;
+    color: black;
+}
+
+.react-calendar__tile--now {
+    background-color: #fffae6;
+    border: 2px solid #007BFF;
+    font-weight: bold;
+}
+
+.react-calendar__tile:hover {
+    background-color: #e6f7ff;
+}
+
+.view_container {
+    padding: 20px;
+}
+
+.view_title {
+    font-size: 1.2rem;
+}
+
+.view_data {
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 1px 25px
+}
