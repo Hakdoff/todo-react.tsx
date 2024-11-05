@@ -91,7 +91,7 @@ function TodoList() {
 
             setNewData({ title: "", deadline: "", isCompleted: false, description: "" });
             setAddModalOpen(false);
-            window.location.reload();
+            fetchTodos();
         } catch (error) {
             console.error("Error adding todo:", error);
         }
@@ -152,7 +152,7 @@ function TodoList() {
                 setUpdateModalOpen(false);
                 setTodo(null);
                 setSelectedTodoId(null);
-                window.location.reload();
+                fetchTodos();
             }
         } catch (error) {
             console.error("Error updating todo:", error);
@@ -172,7 +172,6 @@ function TodoList() {
                 }
 
                 fetchTodos();
-                window.location.reload();
             } catch (error) {
                 console.error("Error deleting todo:", error);
             }
@@ -272,8 +271,8 @@ function TodoList() {
                                         </div>
                                     </div>
                                     <div className="modal-footer">
-                                        <button type="submit" className="btn btn-primary" >Save changes</button>
-                                        <button type="button" className="btn btn-secondary" onClick={() => setAddModalOpen(false)}>Cancel</button>
+                                        <button type="submit" className="btn" >Add Task</button>
+                                        <button type="button" className="btn" onClick={() => setAddModalOpen(false)}>Cancel</button>
                                     </div>
                                 </form>
                             </div>
@@ -326,8 +325,8 @@ function TodoList() {
                                             </div>
                                         </div>
                                         <div className="modal-footer">
-                                            <button type="submit" className="btn btn-primary">Update Todo</button>
-                                            <button type="button" className="btn btn-secondary" onClick={() => {
+                                            <button type="submit" className="btn">Update</button>
+                                            <button type="button" className="btn" onClick={() => {
                                                 setUpdateModalOpen(false); setTodo(null);
                                                 setSelectedTodoId(null);
                                             }}>
@@ -438,10 +437,14 @@ function TodoList() {
                     </>
                 )
                 }
-                {todayToShow < todayTodos.length && (
-                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)}>View More</button>
-                )}
             </div>
+            {todayToShow < todayTodos.length && (
+                    <>
+                        <div className='btn-center'>
+                            <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)} className='btn'>View More</button>
+                        </div>
+                    </>
+                )}
         </section>
     );
 }

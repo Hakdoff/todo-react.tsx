@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 // import Todo from "./todo";
 import { useEffect, useState } from "react";
 import Calendar from "react-calendar";
@@ -28,8 +28,25 @@ interface Note {
     id: number;
     description: string;
     createdAt: string;
-    isEditing?: boolean;
+    isNoteEditing?: boolean;
 }
+
+interface Monthly {
+    id: number;
+    title: string;
+    description: string;
+    createdAt: string;
+    isCompleted: boolean;
+}
+
+interface Weekly {
+    id: number;
+    title: string;
+    description: string;
+    createdAt: string;
+    isCompleted: boolean;
+}
+
 function Planner() {
     const [date, setDate] = useState<Date | null>(null);
     const [todos, setTodos] = useState<Todo[]>([]);
@@ -65,6 +82,8 @@ function Planner() {
     // ------------------------------------------- Daily Tasks -------------------------------------------
     useEffect(() => {
         fetchTodos();
+        fetchMonthlyTodos();
+        fetchWeeklyTodos();
     }, [displayedMonth]);
 
     const fetchTodos = async () => {
@@ -193,7 +212,6 @@ function Planner() {
                 }
 
                 fetchTodos();
-                window.location.reload();
             } catch (error) {
                 console.error("Error deleting todo:", error);
             }
@@ -219,7 +237,7 @@ function Planner() {
                 setUpdateModalOpen(false);
                 setTodo(null);
                 setSelectedTodoId(null);
-                window.location.reload();
+                fetchTodos();
             }
         } catch (error) {
             console.error("Error updating todo:", error);
@@ -280,6 +298,479 @@ function Planner() {
             }
         }
     };
+
+    // ------------------------------------------- Monthly Tasks -------------------------------------------
+
+    const [weeklys, setWeeklys] = useState<Weekly[]>([]);
+    const [weekly, setWeekly] = useState<Weekly | null>(null);
+    const [selectedWeeklyTodos, setSelectedWeeklyTodos] = useState<Weekly[]>([]);
+
+    const fetchWeeklyTodos = async () => {
+        try {
+            const response = await fetch("https://localhost:7168/api/Weekly");
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            const data: Weekly[] = await response.json();
+
+            const sortWeeklyDate = data.sort((a, b) => {
+                return Number(a.isCompleted) - Number(b.isCompleted)
+            })
+            const filteredWeeklyTodos = data.filter((todo) => {
+                const montlyTodoDate = new Date(todo.createdAt);
+                return (
+                    montlyTodoDate.getMonth() === displayedMonth.getMonth() &&
+                    montlyTodoDate.getFullYear() === displayedMonth.getFullYear()
+                );
+            });
+
+            setWeeklys(sortWeeklyDate);
+            setSelectedWeeklyTodos(filteredWeeklyTodos);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    };
+
+    const [addWeeklyModalOpen, setAddWeeklyModalOpen] = useState(false);
+    const [updateWeeklyModalOpen, setUpdateWeeklyModalOpen] = useState(false);
+    const [newWeeklyData, setNewWeeklyData] = useState({
+        title: "",
+        description: "",
+        isCompleted: false,
+        note: "",
+         createdAt: ""
+    });
+
+    const handleInputWeeklyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setNewWeeklyData((prevData) => ({
+            ...prevData,
+            [name]: value,
+        }));
+    };
+    const handleAddWeekly = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const weeklyWithCreatedAt = {
+            ...newWeeklyData,
+            createdAt: displayedMonth,
+        };
+        try {
+            const response = await fetch("https://localhost:7168/api/Weekly", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(weeklyWithCreatedAt),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to add weekly");
+            }
+
+            setNewWeeklyData({ title: "", description: "", isCompleted: false, note: "", createdAt: "" });
+            setAddWeeklyModalOpen(false);
+            fetchWeeklyTodos();
+        } catch (error) {
+            console.error("Error adding weekly:", error);
+        }
+    };
+
+    const [, setSelectedWeeklyId] = useState<number | null>(null)
+
+    useEffect(() => {
+        if (id) {
+            fetchWeekly();
+        }
+    }, [id]);
+
+    const fetchWeekly = async () => {
+        try {
+            const response = await fetch(`https://localhost:7168/api/Weekly/${id}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch todo");
+            }
+            const data: Weekly = await response.json();
+            if (data.createdAt) {
+                const deadlineDate = new Date(data.createdAt);
+                const year = deadlineDate.getFullYear();
+                const week = String(deadlineDate.getMonth() + 1).padStart(2, '0');
+                const day = String(deadlineDate.getDate()).padStart(2, '0');
+                data.createdAt = `${year}-${week}-${day}`; // Format to YYYY-MM-DD
+            }
+            setWeekly(data);
+        } catch (error) {
+            console.error("Error fetching todo:", error);
+        }
+    };
+
+    const handleUpdateWeekly = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (weekly) {
+                const response = await fetch(`https://localhost:7168/api/Weekly/${weekly.id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(weekly),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to update todo");
+                }
+
+                setUpdateWeeklyModalOpen(false);
+                setWeekly(null);
+                setSelectedWeeklyId(null);
+                fetchWeeklyTodos();
+            }
+        } catch (error) {
+            console.error("Error updating todo:", error);
+        }
+    };
+
+    const handleDeleteWeekly = async (id: number) => {
+        setSelectedWeeklyId(id);
+        if (window.confirm("Are you sure you want to delete this todo?")) {
+            try {
+                const response = await fetch(`https://localhost:7168/api/Weekly/${id}`, {
+                    method: "DELETE",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to delete weekly");
+                }
+
+                fetchWeeklyTodos();
+                navigate("/");
+            } catch (error) {
+                console.error("Error deleting weekly:", error);
+            }
+        }
+    };
+
+    const handleEditWeeklyClick = async (id: number) => {
+        setSelectedWeeklyId(id);
+        try {
+            const response = await fetch(`https://localhost:7168/api/Weekly/${id}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch todo");
+            }
+            const data = await response.json();
+            if (data.deadline) {
+                const deadlineDate = new Date(data.deadline);
+                const year = deadlineDate.getFullYear();
+                const week = String(deadlineDate.getMonth() + 1).padStart(2, '0');
+                const day = String(deadlineDate.getDate()).padStart(2, '0');
+                data.deadline = `${year}-${week}-${day}`; // Format to YYYY-MM-DD
+            }
+            setWeekly(data)
+            setUpdateWeeklyModalOpen(true);
+        } catch (error) {
+            console.error("Error fetching todo:", error);
+        }
+    }
+
+
+    const handleWeeklyToggleCompleted = async (id: number) => {
+        const updatedWeekly = weeklys.find(weekly => weekly.id === id);
+        if (updatedWeekly) {
+            const updatedData = { ...updatedWeekly, isCompleted: !updatedWeekly.isCompleted };
+            try {
+                const response = await fetch(`https://localhost:7168/api/Weekly/${id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(updatedData),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to update completion status");
+                }
+
+                // Update local state
+                setWeeklys(prevWeekly =>
+                    prevWeekly.map(weekly =>
+                        weekly.id === id ? updatedData : weekly
+                    )
+                );
+
+                setSelectedWeeklyTodos(prevWeekly =>
+                    prevWeekly.map(weekly =>
+                        weekly.id === id ? updatedData : weekly
+                    )
+                );
+            } catch (error) {
+                console.error("Error updating completion status:", error);
+            }
+        }
+    };
+
+    const [viewWeeklyTasks, setViewWeeklyTask] = useState(false);
+
+    const handleViewWeeklyTask = async (id: number) => {
+        setSelectedWeeklyId(id);
+        try {
+            const response = await fetch(`https://localhost:7168/api/Weekly/${id}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch todo");
+            }
+            const data = await response.json();
+            if (data.deadline) {
+                data.deadline = formatDateForInput(data.deadline);
+            }
+            setWeekly(data)
+            setViewWeeklyTask(true);
+        } catch (error) {
+            console.error("Error fetching todo:", error);
+        }
+    }
+
+
+    // ------------------------------------------- Monthly Tasks -------------------------------------------
+    const [monthlys, setMonthlys] = useState<Monthly[]>([]);
+    const [monthly, setMonthly] = useState<Monthly | null>(null);
+    const [selectedMonthlyTodos, setSelectedMonthlyTodos] = useState<Monthly[]>([]);
+
+    useEffect(() => {
+        fetchMonthlys();
+        fetchMonthlyTodos();
+    }, []);
+
+    const fetchMonthlys = async () => {
+        try {
+            const response = await fetch("https://localhost:7168/api/Monthly");
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            const data: Monthly[] = await response.json();
+            setMonthlys(data);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    };
+
+    const fetchMonthlyTodos = async () => {
+        try {
+            const response = await fetch("https://localhost:7168/api/Monthly");
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            const data: Monthly[] = await response.json();
+
+            const sortMonthlyDate = data.sort((a, b) => {
+                return Number(a.isCompleted) - Number(b.isCompleted)
+            })
+            const filteredMonthlyTodos = data.filter((todo) => {
+                const montlyTodoDate = new Date(todo.createdAt);
+                return (
+                    montlyTodoDate.getMonth() === displayedMonth.getMonth() &&
+                    montlyTodoDate.getFullYear() === displayedMonth.getFullYear()
+                );
+            });
+
+            setMonthlys(sortMonthlyDate);
+            setSelectedMonthlyTodos(filteredMonthlyTodos);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    };
+
+    const [addMonthlyModalOpen, setAddMonthlyModalOpen] = useState(false);
+    const [updateMonthlyModalOpen, setUpdateMonthlyModalOpen] = useState(false);
+    const [newMonthlyData, setNewMonthlyData] = useState({
+        title: "",
+        description: "",
+        isCompleted: false,
+        note: "",
+        createdAt: ""
+    });
+
+    const handleMonthlyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setNewMonthlyData((prevData) => ({
+            ...prevData,
+            [name]: value,
+        }));
+    };
+
+    const handleAddMonthly = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const monthlyWithCreatedAt = {
+            ...newMonthlyData,
+            createdAt: displayedMonth,
+        };
+        try {
+            const response = await fetch("https://localhost:7168/api/Monthly", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(monthlyWithCreatedAt),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to add monthly");
+            }
+
+            setNewMonthlyData({ title: "", description: "", isCompleted: false, note: "", createdAt: "" });
+            setAddMonthlyModalOpen(false);
+            fetchMonthlyTodos();
+        } catch (error) {
+            console.error("Error adding monthly:", error);
+        }
+    };
+
+    const [, setSelectedMonthlyId] = useState<number | null>(null)
+
+    useEffect(() => {
+        if (id) {
+            fetchMonthly();
+        }
+    }, [id]);
+
+    const fetchMonthly = async () => {
+        try {
+            const response = await fetch(`https://localhost:7168/api/Monthly/${id}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch todo");
+            }
+            const data: Monthly = await response.json();
+            if (data.createdAt) {
+                const deadlineDate = new Date(data.createdAt);
+                const year = deadlineDate.getFullYear();
+                const month = String(deadlineDate.getMonth() + 1).padStart(2, '0');
+                const day = String(deadlineDate.getDate()).padStart(2, '0');
+                data.createdAt = `${year}-${month}-${day}`; // Format to YYYY-MM-DD
+            }
+            setMonthly(data);
+        } catch (error) {
+            console.error("Error fetching todo:", error);
+        }
+    };
+
+    const handleUpdateMonthly = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (monthly) {
+                const response = await fetch(`https://localhost:7168/api/Monthly/${monthly.id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(monthly),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to update todo");
+                }
+
+                setUpdateMonthlyModalOpen(false);
+                setMonthly(null);
+                setSelectedMonthlyId(null);
+                fetchMonthlyTodos();
+            }
+        } catch (error) {
+            console.error("Error updating todo:", error);
+        }
+    };
+
+    const handleDeleteMonthly = async (id: number) => {
+        setSelectedMonthlyId(id);
+
+        if (window.confirm("Are you sure you want to delete this todo?")) {
+            try {
+                const response = await fetch(`https://localhost:7168/api/Monthly/${id}`, {
+                    method: "DELETE",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to delete monthly");
+                }
+
+                fetchMonthlyTodos();
+                navigate("/");
+            } catch (error) {
+                console.error("Error deleting monthly:", error);
+            }
+        }
+    };
+
+    const handleEditMonthlyClick = async (id: number) => {
+        setSelectedMonthlyId(id);
+        try {
+            const response = await fetch(`https://localhost:7168/api/Monthly/${id}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch todo");
+            }
+            const data = await response.json();
+            if (data.deadline) {
+                const deadlineDate = new Date(data.deadline);
+                const year = deadlineDate.getFullYear();
+                const month = String(deadlineDate.getMonth() + 1).padStart(2, '0');
+                const day = String(deadlineDate.getDate()).padStart(2, '0');
+                data.deadline = `${year}-${month}-${day}`; // Format to YYYY-MM-DD
+            }
+            setMonthly(data)
+            setUpdateMonthlyModalOpen(true);
+        } catch (error) {
+            console.error("Error fetching todo:", error);
+        }
+    }
+
+    const handleMonthlyToggleCompleted = async (id: number) => {
+        const updatedMonthly = monthlys.find(monthly => monthly.id === id);
+        if (updatedMonthly) {
+            const updatedData = { ...updatedMonthly, isCompleted: !updatedMonthly.isCompleted };
+            try {
+                const response = await fetch(`https://localhost:7168/api/Monthly/${id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(updatedData),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to update completion status");
+                }
+
+                // Update local state
+                setMonthlys(prevMonthly =>
+                    prevMonthly.map(monthly =>
+                        monthly.id === id ? updatedData : monthly
+                    )
+                );
+                setSelectedMonthlyTodos(prevMonthly =>
+                    prevMonthly.map(monthly =>
+                        monthly.id === id ? updatedData : monthly
+                    )
+                );
+            } catch (error) {
+                console.error("Error updating completion status:", error);
+            }
+        }
+    };
+    const [viewMonthlyTasks, setViewMonthlyTask] = useState(false);
+
+    const handleViewMonthlyTask = async (id: number) => {
+        setSelectedMonthlyId(id);
+        try {
+            const response = await fetch(`https://localhost:7168/api/Monthly/${id}`);
+            if (!response.ok) {
+                throw new Error("Failed to fetch todo");
+            }
+            const data = await response.json();
+            if (data.deadline) {
+                data.deadline = formatDateForInput(data.deadline);
+            }
+            setMonthly(data)
+            setViewMonthlyTask(true);
+        } catch (error) {
+            console.error("Error fetching todo:", error);
+        }
+    }
 
     // ------------------------------------------- Monthly Goals -------------------------------------------
     const [goals, setGoals] = useState<Goal[]>([]);
@@ -346,7 +837,7 @@ function Planner() {
 
             setnewGoalData({ title: "", deadline: "", isCompleted: false, note: "", createdAt: "" });
             setAddGoalModalOpen(false);
-            window.location.reload();
+            fetchGoals();
         } catch (error) {
             console.error("Error adding goal:", error);
         }
@@ -400,7 +891,6 @@ function Planner() {
                 }
 
                 fetchGoals();
-                window.location.reload();
             } catch (error) {
                 console.error("Error deleting goal:", error);
             }
@@ -413,7 +903,7 @@ function Planner() {
         ));
     };
 
-    const handleEditTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>, id: number) => {
+    const handleEditGoalTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>, id: number) => {
         const newTitle = e.target.value;
         setSelectedMonthGoals(prevGoals =>
             prevGoals.map(goal =>
@@ -503,6 +993,13 @@ function Planner() {
     // ------------------------------------------- Monthly Notes -------------------------------------------
     const [notes, setNotes] = useState<Note[]>([]);
     const [selectedMonthNotes, setSelectedMonthNotes] = useState<Note[]>([]);
+    const navigate = useNavigate();
+    const [addNoteModalOpen, setAddNoteModalOpen] = useState(false);
+    const [newData, setNewData] = useState({
+        description: "",
+        createdAt: ""
+    });
+    const [, setSelectedNoteId] = useState<number | null>(null)
 
     useEffect(() => {
         fetchNotes();
@@ -530,11 +1027,123 @@ function Planner() {
         }
     };
 
+    const handleAddNote = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const noteWithCreatedAt = {
+            ...newData,
+            createdAt: displayedMonth,
+        };
+        try {
+            const response = await fetch("https://localhost:7168/api/Note", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(noteWithCreatedAt),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to add note");
+            }
+
+            setNewData({ description: "", createdAt: "" });
+            setAddNoteModalOpen(false);
+            fetchNotes();
+        } catch (error) {
+            console.error("Error adding note:", error);
+        }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setNewData((prevData) => ({
+            ...prevData,
+            [name]: value,
+        }));
+    };
+
+    const handleDeleteNote = async (id: number) => {
+        setSelectedNoteId(id);
+        if (window.confirm("Are you sure you want to delete this todo?")) {
+            try {
+                const response = await fetch(`https://localhost:7168/api/Note/${id}`, {
+                    method: "DELETE",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to delete note");
+                }
+
+                fetchNotes(); // Refresh the todo list after deleting
+                navigate("/");
+            } catch (error) {
+                console.error("Error deleting note:", error);
+            }
+        }
+    };
+
+    const handleEditNoteClick = async (id: number) => {
+        setSelectedMonthNotes(prevNotes => prevNotes.map(note =>
+            note.id === id ? { ...note, isNoteEditing: true } : note
+        ));
+    };
+
+    const handleEditNoteTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>, id: number) => {
+        const newNote = e.target.value;
+        setSelectedMonthNotes(prevNotes =>
+            prevNotes.map(note =>
+                note.id === id ? { ...note, description: newNote } : note
+            )
+        );
+    };
+
+    const handleSaveNoteTitle = async (id: number) => {
+        const noteToUpdate = selectedMonthNotes.find(note => note.id === id);
+        if (noteToUpdate) {
+            try {
+                const response = await fetch(`https://localhost:7168/api/Note/${id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(noteToUpdate),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to update goal");
+                }
+
+                setNotes(prevNotes =>
+                    prevNotes.map(note =>
+                        note.id === id ? { ...note, ...noteToUpdate, isNoteEditing: false } : note
+                    )
+                );
+
+                setSelectedMonthNotes(prevNotes =>
+                    prevNotes.map(note =>
+                        note.id === id ? { ...note, isNoteEditing: false } : note
+                    )
+                );
+            } catch (error) {
+                console.error("Error updating goal:", error);
+            }
+        }
+    };
+
+    const cancelEditingNote = (id: number) => {
+        setNotes(prevNotes =>
+            prevNotes.map(note =>
+                note.id === id ? { ...note, isEditing: false } : note
+            )
+        );
+    }
+
 
 
 
     return (
         <section className="todo">
+            {/* ------------------------------------------------ Update Task Modal ----------------------------------- */}
             {updateModalOpen && (
                 <div className="modal fade show" role="dialog" style={{ display: "block" }}>
                     <div className="modal-dialog modal-dialog-centered" role="document">
@@ -573,8 +1182,8 @@ function Planner() {
                                             </div>
                                         </div>
                                         <div className="modal-footer">
-                                            <button type="submit" className="btn btn-primary">Update Todo</button>
-                                            <button type="button" className="btn btn-secondary" onClick={() => {
+                                            <button type="submit" className="btn">Update Todo</button>
+                                            <button type="button" className="btn" onClick={() => {
                                                 setUpdateModalOpen(false); setTodo(null);
                                                 setSelectedTodoId(null);
                                             }}>
@@ -656,8 +1265,8 @@ function Planner() {
                                     </div>
                                 </div>
                                 <div className="modal-footer ">
-                                    <button type="button" className="btn btn-secondary" onClick={() => setAddGoalModalOpen(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary" >Save changes</button>
+                                    <button type="submit" className="btn" >Add</button>
+                                    <button type="button" className="btn" onClick={() => setAddGoalModalOpen(false)}>Cancel</button>
                                 </div>
                             </form>
                         </div>
@@ -671,14 +1280,329 @@ function Planner() {
                 ></div>
             )}
 
+            {/* ------------------------------------------------ Add Goal Modal ----------------------------------- */}
+
+            {addNoteModalOpen && (
+                <div className="modal fade show" role="dialog" style={{ display: "block" }}>
+                    <div className="modal-dialog modal-dialog-centered" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title" id="exampleModalLongTitle">Add New Note</h5>
+                            </div>
+                            <div>
+                                <form onSubmit={handleAddNote}>
+                                    <div className='goals__add-container'>
+                                        <div className='goals__input-container'>
+                                            <label className='goals__label' htmlFor="">Goal:</label>
+                                            <input type="text" name="description" className="goals__input" placeholder="description" value={newData.description} onChange={handleInputChange} required />
+                                        </div>
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button type="submit" className="btn" >Add Note</button>
+                                        <button type="button" className="btn" onClick={() => setAddNoteModalOpen(false)}>Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {addNoteModalOpen && (
+                <div
+                    className="modal-backdrop fade show"
+                    onClick={() => setAddNoteModalOpen(false)}
+                ></div>
+            )}
+
+            {/* ------------------------------------------------ Add Monthly Tasks Modal ----------------------------------- */}
+
+
+            {addMonthlyModalOpen && (
+                <div className="modal fade show" role="dialog" style={{ display: "block" }}>
+                    <div className="modal-dialog modal-dialog-centered" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title" id="exampleModalLongTitle">Add New Monthly Task</h5>
+                            </div>
+                            <div>
+                                <form onSubmit={handleAddMonthly}>
+                                    <div className='goals__add-container'>
+                                        <div className='goals__input-container'>
+                                            <label className='goals__label' htmlFor="">Task:</label>
+                                            <input type="text" className="goals__input" name="title" placeholder="Title" value={newMonthlyData.title} onChange={handleMonthlyInputChange} required />
+                                        </div>
+                                        <div className='goals__input-container'>
+                                            <label className='goals__label' htmlFor="">Description:</label>
+                                            <input type="text" className="goals__input" name="description" placeholder="Description" value={newMonthlyData.description} onChange={handleMonthlyInputChange} required />
+                                        </div>
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button type="submit" className="btn" >Add Task</button>
+                                        <button type="button" className="btn" onClick={() => setAddMonthlyModalOpen(false)}>Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {addMonthlyModalOpen && (
+                <div
+                    className="modal-backdrop fade show"
+                    onClick={() => setAddMonthlyModalOpen(false)}
+                ></div>
+            )}
+
+            {/* ------------------------------------------------ Update Monthly Tasks Modal ----------------------------------- */}
+
+            {updateMonthlyModalOpen && (
+                <div className="modal fade show" role="dialog" style={{ display: "block" }}>
+                    <div className="modal-dialog modal-dialog-centered" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title" id="exampleModalLongTitle">Edit Task</h5>
+                            </div>
+                            <div>
+                                {monthly ? (
+                                    <form onSubmit={handleUpdateMonthly}>
+                                        <div className='goals__add-container'>
+                                            <div className='goals__input-container'>
+                                                <label className='goals__label' htmlFor="">Task:</label>
+                                                <input
+                                                    type="text"
+                                                    className="goals__input"
+                                                    name="Task Title"
+                                                    value={monthly.title}
+                                                    onChange={(e) => setMonthly({ ...monthly, title: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className='goals__input-container'>
+                                                <label className='goals__label' htmlFor="">Description:</label>
+                                                <input
+                                                    type="text"
+                                                    className="goals__input"
+                                                    name="description"
+                                                    value={monthly.description}
+                                                    onChange={(e) => setMonthly({ ...monthly, description: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="modal-footer">
+                                            <button type="submit" className="btn">Update Task</button>
+                                            <button type="button" className="btn" onClick={() => {
+                                                setUpdateMonthlyModalOpen(false); setMonthly(null);
+                                                setSelectedMonthlyId(null);
+                                            }}>
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <p>Loading...</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {updateMonthlyModalOpen && (
+                <div
+                    className="modal-backdrop fade show"
+                    onClick={() => setUpdateMonthlyModalOpen(false)}
+                ></div>
+            )}
+
+            {/* ------------------------------------------------ View Monthly Tasks Modal ----------------------------------- */}
+
+            {viewMonthlyTasks && (
+                <div className="modal fade show" role="dialog" style={{ display: "block" }}>
+                    <div className="modal-dialog modal-dialog-centered" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title" id="exampleModalLongTitle">View Monthly Task</h5>
+                                <button type="button" className="close" data-dismiss="modal" aria-label="Close" onClick={() => {
+                                    setViewMonthlyTask(false);
+                                }}>
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div>
+                                {monthly ? (
+                                    <>
+                                        <div className="view_container">
+                                            <div>
+                                                <div className='view_title'>Task Title:</div>
+                                                <div className='view_data'>- {monthly.title}</div></div>
+                                            <div>
+                                                <div className='view_title'>Task Description:</div>
+                                                <div className='view_data'>- {monthly.description}</div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p>Loading...</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {viewMonthlyTasks && (
+                <div
+                    className="modal-backdrop fade show"
+                    onClick={() => setViewMonthlyTask(false)}
+                ></div>
+            )}
+
+            {/* ------------------------------------------------ Add Weekly Tasks Modal ----------------------------------- */}
+
+            {addWeeklyModalOpen && (
+                <div className="modal fade show" role="dialog" style={{ display: "block" }}>
+                    <div className="modal-dialog modal-dialog-centered" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title" id="exampleModalLongTitle">Add New Weekly Task</h5>
+                            </div>
+                            <div>
+                                <form onSubmit={handleAddWeekly}>
+                                    <div className='goals__add-container'>
+                                        <div className='goals__input-container'>
+                                            <label className='goals__label' htmlFor="">Task:</label>
+                                            <input type="text" className="goals__input" name="title" placeholder="Task Title" value={newWeeklyData.title} onChange={handleInputWeeklyChange} required />
+                                        </div>
+                                        <div className='goals__input-container'>
+                                            <label className='goals__label' htmlFor="">Description:</label>
+                                            <input type="text" className="goals__input" name="description" placeholder="Description" value={newWeeklyData.description} onChange={handleInputWeeklyChange} />
+                                        </div>
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button type="submit" className="btn" >Add Task</button>
+                                        <button type="button" className="btn" onClick={() => setAddWeeklyModalOpen(false)}>Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {addWeeklyModalOpen && (
+                <div
+                    className="modal-backdrop fade show"
+                    onClick={() => setAddWeeklyModalOpen(false)}
+                ></div>
+            )}
+
+             {/* ------------------------------------------------ Update Weekly Tasks Modal ----------------------------------- */}
+
+            {updateWeeklyModalOpen && (
+                <div className="modal fade show" role="dialog" style={{ display: "block" }}>
+                    <div className="modal-dialog modal-dialog-centered" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title" id="exampleModalLongTitle">Edit Task</h5>
+                            </div>
+                            <div>
+                                {weekly ? (
+                                    <form onSubmit={handleUpdateWeekly}>
+                                        <div className='goals__add-container'>
+                                            <div className='goals__input-container'>
+                                                <label className='goals__label' htmlFor="">Task:</label>
+                                                <input
+                                                    type="text"
+                                                    className="goals__input"
+                                                    name="title"
+                                                    value={weekly.title}
+                                                    onChange={(e) => setWeekly({ ...weekly, title: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className='goals__input-container'>
+                                                <label className='goals__label' htmlFor="">Task:</label>
+                                                <input
+                                                    type="text"
+                                                    className="goals__input"
+                                                    name="description"
+                                                    value={weekly.description}
+                                                    onChange={(e) => setWeekly({ ...weekly, description: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="modal-footer">
+                                            <button type="submit" className="btn" >Update Weekly</button>
+                                            <button type="button" className="btn" onClick={() => {
+                                                setUpdateWeeklyModalOpen(false); setWeekly(null);
+                                                setSelectedWeeklyId(null);
+                                            }}>
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <p>Loading...</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {updateWeeklyModalOpen && (
+                <div
+                    className="modal-backdrop fade show"
+                    onClick={() => setUpdateWeeklyModalOpen(false)}
+                ></div>
+            )}
+
+            {viewWeeklyTasks && (
+                <div className="modal fade show" role="dialog" style={{ display: "block" }}>
+                    <div className="modal-dialog modal-dialog-centered" role="document">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title" id="exampleModalLongTitle">View Weekly Task</h5>
+                                <button type="button" className="close" data-dismiss="modal" aria-label="Close" onClick={() => {
+                                    setViewWeeklyTask(false);
+                                }}>
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div>
+                                {weekly ? (
+                                    <>
+                                        <div className="view_container">
+                                            <div>
+                                                <div className='view_title'>Task Title:</div>
+                                                <div className='view_data'>- {weekly.title}</div></div>
+                                            <div>
+                                                <div className='view_title'>Task Description:</div>
+                                                <div className='view_data'>- {weekly.description}</div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p>Loading...</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {viewWeeklyTasks && (
+                <div
+                    className="modal-backdrop fade show"
+                    onClick={() => setViewWeeklyTask(false)}
+                ></div>
+            )}
+
             <div className="header">
                 <div className="appbar__tasks">
                     <div className="appbar__title">Erika's Planner</div>
                     <hr className="appbar__hr" />
                     <div className="appbar__sub-title">
-                        <button onClick={prevMonth}>Previous Month</button>
-                        {getMonthName(displayedMonth)}
-                        <button onClick={nextMonth}>Next Month</button>
+                        <button onClick={prevMonth} className="btn-prev">&lt;&lt;</button>
+                        <div>{getMonthName(displayedMonth)}</div>
+                        <button onClick={nextMonth} className="btn-prev">&gt;&gt;</button>
                     </div>
                 </div>
             </div>
@@ -690,7 +1614,9 @@ function Planner() {
                             <div className='goals'>
                                 <div className="goals__title-container">
                                     <div className='goals__title'>Goals</div>
-                                    <div className='goals__title'><i className="bi bi-plus-circle" onClick={() => setAddGoalModalOpen(true)}></i></div>
+                                    <div className='goals__title'>
+                                        <i className="bi bi-plus-circle" onClick={() => setAddGoalModalOpen(true)}></i>
+                                    </div>
                                 </div>
                                 {selectedMonthGoals.length === 0 ? (
                                     <div>No Goals yet</div>
@@ -712,7 +1638,7 @@ function Planner() {
                                                                 <textarea name="title"
                                                                     className="goals__input"
                                                                     value={goal.title}
-                                                                    onChange={(e) => handleEditTitleChange(e, goal.id)}
+                                                                    onChange={(e) => handleEditGoalTitleChange(e, goal.id)}
                                                                     autoFocus
                                                                 />
                                                                 <i className="bi bi-check-circle" onClick={() => handleSaveTitle(goal.id)}></i>
@@ -805,24 +1731,143 @@ function Planner() {
                             <hr className="body__hr" />
                             <WeeklyList />
                             <hr className="body__hr" />
-                            <MonthlyList /></>)
+                            <MonthlyList />
+                        </>)
                         : (
                             <>
-                                <hr className="body__hr" />
-                                <div className="body__todo goals">
-                                    <h2>Tasks for {getMonthName(displayedMonth)}</h2>
-
+                                <h2 style={{ textAlign: "center" }}>Tasks for {getMonthName(displayedMonth)}</h2>
+                                <div className="row body__row">
                                     {selectedMonthTodos.length === 0 ? (
                                         <p>No tasks for this month</p>
                                     ) : (
                                         selectedMonthTodos.map((todo) => (
-                                            <div key={todo.id}>
-                                                <h3>{todo.title}</h3>
-                                                <p>{todo.description}</p>
-                                                <small>{todo.deadline}</small>
+                                            <div className='body__lists'>
+                                                <div className="body__list-container" key={todo.id} >
+                                                    <div className='body__card__left' >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={todo.isCompleted}
+                                                            onChange={() => handleToggleCompleted(todo.id)}
+                                                            style={{ marginRight: "10px" }}
+                                                        />
+                                                        <div className="body__card" onClick={() => handleViewTask(todo.id)} style={{ cursor: "pointer", textDecoration: todo.isCompleted ? "line-through" : "none", }}>
+                                                            <div className="body__card__title">
+                                                                {todo.title}
+                                                            </div>
+                                                            {todo.description === "" ? (
+                                                                <div>---</div>
+                                                            ) : (
+                                                                <div className="body__card__desc">
+                                                                    {todo.description}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className='body__card__right'>
+                                                        <div className="body__icons-container">
+                                                            <i className="bi bi-pencil" key={`edit-icon-${todo.id}`} onClick={() => handleEditClick(todo.id)}
+                                                                style={{ cursor: "pointer" }}></i>
+                                                            <i className="bi bi-x-circle" key={`delete-icon-${todo.id}`} onClick={() => handleDeleteTodo(todo.id)}
+                                                                style={{ cursor: "pointer" }}></i>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
+
                                         ))
                                     )}
+                                </div>
+                                <hr className="body__hr" />
+                                <div className="body__title-container">
+                                    <div className='goals__title'>Weekly Tasks</div>
+                                    <div className='goals__title'><i className="bi bi-plus-circle" onClick={() => setAddWeeklyModalOpen(true)}></i></div>
+                                </div>
+                                <div className="row body__row">
+                                    {selectedWeeklyTodos.length === 0 ? (
+                                        <div>No  tasks for today</div>
+                                    ) : (
+                                        <>
+                                            {selectedWeeklyTodos.map((weekly) => (
+                                                <div className='body__lists'>
+                                                    <div className="body__list-container" key={weekly.id} >
+                                                        <div className='body__card__left' >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={weekly.isCompleted}
+                                                                onChange={() => handleWeeklyToggleCompleted(weekly.id)}
+                                                                style={{ marginRight: "10px" }}
+                                                            />
+                                                            <div className="body__card" onClick={() => handleViewWeeklyTask(weekly.id)} style={{ cursor: "pointer", textDecoration: weekly.isCompleted ? "line-through" : "none", }}>
+                                                                <div className="body__card__title">{weekly.title}</div>
+                                                                <div className="body__card__desc">
+                                                                    {weekly.description === "" ? (
+                                                                        <div>---</div>
+                                                                    ) : (
+                                                                        <div className="body__card__desc">
+                                                                            {weekly.description}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className='body__card__right'>
+                                                            <div className="body__icons-container">
+                                                                <i className="bi bi-pencil" key={`edit-icon-${weekly.id}`} onClick={() => handleEditWeeklyClick(weekly.id)}></i>
+                                                                <i className="bi bi-x-circle" key={`delete-icon-${weekly.id}`} onClick={() => handleDeleteWeekly(weekly.id)}></i>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )
+                                    }
+                                </div>
+                                <hr className="body__hr" />
+                                <div className="body__title-container">
+                                    <div className='goals__title'>Monthly Tasks</div>
+                                    <div className='goals__title'><i className="bi bi-plus-circle" onClick={() => setAddMonthlyModalOpen(true)}></i></div>
+                                </div>
+                                <div className="row body__row">
+                                    {selectedMonthlyTodos.length === 0 ? (
+                                        <div>No  tasks for today</div>
+                                    ) : (
+                                        <>
+                                            {selectedMonthlyTodos.map((monthly) => (
+                                                <div className='body__lists'>
+                                                    <div className="body__list-container" key={monthly.id} >
+                                                        <div className='body__card__left' >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={monthly.isCompleted}
+                                                                onChange={() => handleMonthlyToggleCompleted(monthly.id)}
+                                                                style={{ marginRight: "10px" }}
+                                                            />
+                                                            <div className="body__card" onClick={() => handleViewMonthlyTask(monthly.id)} style={{ cursor: "pointer", textDecoration: monthly.isCompleted ? "line-through" : "none", }}>
+                                                                <div className="body__card__title">{monthly.title}</div>
+                                                                <div className="body__card__desc">
+                                                                    {monthly.description === "" ? (
+                                                                        <div>---</div>
+                                                                    ) : (
+                                                                        <div className="body__card__desc">
+                                                                            {monthly.description}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className='body__card__right'>
+                                                            <div className="body__icons-container">
+                                                                <i className="bi bi-pencil" key={`edit-icon-${monthly.id}`} onClick={() => handleEditMonthlyClick(monthly.id)}></i>
+                                                                <i className="bi bi-x-circle" key={`delete-icon-${monthly.id}`} onClick={() => handleDeleteMonthly(monthly.id)}></i>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )
+                                    }
                                 </div>
                             </>
                         )}
@@ -835,23 +1880,66 @@ function Planner() {
                         </div>
                     </div>
                     <div className="">
-                        {getMonthName(displayedMonth) === currentMonthName ? (
-                            <NoteList />) : (<>
-                                <hr className="body__hr" />
-                                <div className="body__todo goals">
-                                    <h2>Notes</h2>
-
-                                    {selectedMonthNotes.length === 0 ? (
-                                        <p>No tasks for this month</p>
-                                    ) : (
-                                        selectedMonthNotes.map((notes) => (
-                                            <div key={notes.id}>
-                                                <h6>{notes.description}</h6><br />
+                        {getMonthName(displayedMonth) === currentMonthName ?
+                            (
+                                <NoteList />
+                            ) : (
+                                <>
+                                    <div className='goals'>
+                                        <div className="goals__title-container">
+                                            <div className='goals__title'>
+                                                Notes
                                             </div>
-                                        ))
-                                    )}
-                                </div>
-                            </>)}
+                                            <div className='goals__title'>
+                                                <i className="bi bi-plus-circle" onClick={() => setAddNoteModalOpen(true)}></i>
+                                            </div>
+                                        </div>
+                                        {selectedMonthNotes.length === 0 ? (
+                                            <div>No Goals yet</div>
+                                        ) : (
+                                            <>
+                                                {
+                                                    selectedMonthNotes.map((note) => (
+                                                        <div className='goals__lists'>
+                                                            <div className="goals__list-container"
+                                                                key={note.id} >
+                                                                {note.isNoteEditing ? (
+                                                                    <>
+                                                                        <textarea name="title"
+                                                                            className="goals__input"
+                                                                            value={note.description}
+                                                                            onChange={(e) => handleEditNoteTitleChange(e, note.id)}
+                                                                            autoFocus
+                                                                        />
+                                                                        <i className="bi bi-check-circle" onClick={() => handleSaveNoteTitle(note.id)}></i>
+                                                                        <i className="bi bi-x-circle" onClick={() => cancelEditingNote(note.id)}></i>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div
+                                                                            className='goals__list-title-container'
+                                                                            style={{
+                                                                                cursor: "pointer",
+                                                                            }}>
+
+                                                                            {note.description}
+                                                                        </div>
+                                                                        <div className="goals__icons-container">
+                                                                            <i className="bi bi-pencil" key={`edit-icon-${note.id}`} onClick={() => handleEditNoteClick(note.id)}></i>
+                                                                            <i className="bi bi-x-circle" key={`delete-icon-${note.id}`} onClick={() => handleDeleteNote(note.id)}></i>
+                                                                        </div>
+                                                                    </>)}
+
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                }
+                                            </>
+                                        )
+                                        }
+                                    </div>
+                                </>
+                            )}
                     </div>
                 </div>
             </div>

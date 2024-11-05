@@ -16,12 +16,26 @@ function WeeklyList() {
     const initialItemsToShow = 6;
     const itemsIncrement = 6;
     const navigate = useNavigate();
+    
+    const today = new Date();
+    const currentWeek = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    const weeklyTasks = weeklys.filter(weeklys => {
+        const weeklyDate = new Date(weeklys.createdAt);
+        return (
+            weeklyDate.getMonth() === currentWeek &&
+            weeklyDate.getFullYear() === currentYear
+        )
+    }
+    );
+    const [displayedMonth, ] = useState(today)
 
     const [todayToShow, setTodayToShow] = useState(initialItemsToShow);
 
     useEffect(() => {
         fetchWeeklys();
-    }, []);
+    }, [displayedMonth]);
 
     const fetchWeeklys = async () => {
         try {
@@ -35,25 +49,6 @@ function WeeklyList() {
             console.error("Error fetching data:", error);
         }
     };
-    const today = new Date();
-    const currentWeek = today.getMonth();
-    const currentYear = today.getFullYear();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1)
-    const startOfWeek = new Date(today);
-    const endOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-    const weeklyTasks = weeklys.filter(weeklys => {
-        const weeklyDate = new Date(weeklys.createdAt);
-        return (
-            weeklyDate.getMonth() === currentWeek &&
-            weeklyDate.getFullYear() === currentYear
-        )
-    }
-    );
 
     const [addModalOpen, setAddModalOpen] = useState(false);
     const [updateModalOpen, setUpdateModalOpen] = useState(false);
@@ -62,6 +57,7 @@ function WeeklyList() {
         description: "",
         isCompleted: false,
         note: "",
+        createdAt: ""
     });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,24 +67,30 @@ function WeeklyList() {
             [name]: value,
         }));
     };
+    
+
     const handleAddWeekly = async (e: React.FormEvent) => {
         e.preventDefault();
+        const weeklyWithCreatedAt = {
+            ...newData,
+            createdAt: displayedMonth,
+        }; 
         try {
             const response = await fetch("https://localhost:7168/api/Weekly", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(newData),
+                body: JSON.stringify(weeklyWithCreatedAt),
             });
 
             if (!response.ok) {
                 throw new Error("Failed to add weekly");
             }
 
-            setNewData({ title: "", description: "", isCompleted: false, note: "" });
+            setNewData({ title: "", description: "", isCompleted: false, note: "", createdAt: "" });
             setAddModalOpen(false);
-            window.location.reload();
+            fetchWeeklys();
         } catch (error) {
             console.error("Error adding weekly:", error);
         }
@@ -142,7 +144,7 @@ function WeeklyList() {
                 setUpdateModalOpen(false);
                 setWeekly(null);
                 setSelectedWeeklyId(null);
-                window.location.reload();
+                fetchWeeklys();
             }
         } catch (error) {
             console.error("Error updating todo:", error);
@@ -235,7 +237,7 @@ function WeeklyList() {
     const handleViewTask = async (id: number) => {
         setSelectedWeeklyId(id);
         try {
-            const response = await fetch(`https://localhost:7168/api/Todo/${id}`);
+            const response = await fetch(`https://localhost:7168/api/Weekly/${id}`);
             if (!response.ok) {
                 throw new Error("Failed to fetch todo");
             }
@@ -272,8 +274,8 @@ function WeeklyList() {
                                         </div>
                                     </div>
                                     <div className="modal-footer">
-                                        <button type="submit" className="btn btn-primary" >Save changes</button>
-                                        <button type="button" className="btn btn-secondary" onClick={() => setAddModalOpen(false)}>Cancel</button>
+                                        <button type="submit" className="btn" >Add Task</button>
+                                        <button type="button" className="btn" onClick={() => setAddModalOpen(false)}>Cancel</button>
                                     </div>
                                 </form>
                             </div>
@@ -323,8 +325,8 @@ function WeeklyList() {
                                             </div>
                                         </div>
                                         <div className="modal-footer">
-                                            <button type="submit" className="btn btn-primary" >Update Weekly</button>
-                                            <button type="button" className="btn btn-secondary" onClick={() => {
+                                            <button type="submit" className="btn" >Update Weekly</button>
+                                            <button type="button" className="btn" onClick={() => {
                                                 setUpdateModalOpen(false); setWeekly(null);
                                                 setSelectedWeeklyId(null);
                                             }}>
@@ -432,7 +434,7 @@ function WeeklyList() {
                 )
                 }
                 {todayToShow < weeklyTasks.length && (
-                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)}>View More</button>
+                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)}className='btn'>View More</button>
                 )}
             </div>
         </section>

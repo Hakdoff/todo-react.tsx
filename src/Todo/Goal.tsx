@@ -17,10 +17,12 @@ function GoalList() {
     const itemsIncrement = 6;
 
     const [todayToShow, setTodayToShow] = useState(initialItemsToShow);
+    const today = new Date();
+    const [displayedMonth, ] = useState(today)
 
     useEffect(() => {
         fetchGoals();
-    }, []);
+    }, [displayedMonth]);
 
     const fetchGoals = async () => {
         try {
@@ -34,7 +36,7 @@ function GoalList() {
             console.error("Error fetching data:", error);
         }
     };
-    const today = new Date();
+    
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
     today.setHours(0, 0, 0, 0);
@@ -60,6 +62,7 @@ function GoalList() {
         deadline: "",
         isCompleted: false,
         note: "",
+        createdAt: ""
     });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,22 +75,26 @@ function GoalList() {
 
     const handleAddGoal = async (e: React.FormEvent) => {
         e.preventDefault();
+        const goalWithCreatedAt = {
+            ...newGoalData,
+            createdAt: displayedMonth,
+        }; 
         try {
             const response = await fetch("https://localhost:7168/api/Goal", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(newGoalData),
+                body: JSON.stringify(goalWithCreatedAt),
             });
 
             if (!response.ok) {
                 throw new Error("Failed to add goal");
             }
 
-            setnewGoalData({ title: "", deadline: "", isCompleted: false, note: "" });
+            setnewGoalData({ title: "", deadline: "", isCompleted: false, note: "", createdAt: "" });
             setAddModalOpen(false);
-            window.location.reload();
+            fetchGoals();
         } catch (error) {
             console.error("Error adding goal:", error);
         }
@@ -237,8 +244,8 @@ function GoalList() {
                                     </div>
                                 </div>
                                 <div className="modal-footer ">
-                                    <button type="button" className="btn btn-secondary" onClick={() => setAddModalOpen(false)}>Cancel</button>
-                                    <button type="submit" className="btn btn-primary" >Save changes</button>
+                                    <button type="submit" className="btn" >Add Goal</button>
+                                    <button type="button" className="btn" onClick={() => setAddModalOpen(false)}>Cancel</button>
                                 </div>
                             </form>
                         </div>
@@ -273,13 +280,13 @@ function GoalList() {
                                         />
                                         {goal.isEditing ? (
                                             <>
-                                            <textarea name="title"
-                                            className="goals__input"
-                                                value={goal.title}
-                                                onChange={(e) => handleEditTitleChange(e, goal.id)}
-                                                // onBlur={() => handleSaveTitle(goal.id)} Save on blur or use a button
-                                                autoFocus
-                                            />
+                                                <textarea name="title"
+                                                    className="goals__input"
+                                                    value={goal.title}
+                                                    onChange={(e) => handleEditTitleChange(e, goal.id)}
+                                                    // onBlur={() => handleSaveTitle(goal.id)} Save on blur or use a button
+                                                    autoFocus
+                                                />
                                                 <i className="bi bi-check-circle" onClick={() => handleSaveTitle(goal.id)}></i>
                                                 <i className="bi bi-x-circle" onClick={() => cancelEditing(goal.id)}></i>
                                             </>
@@ -308,7 +315,7 @@ function GoalList() {
                 )
                 }
                 {todayToShow < monthlyGoals.length && (
-                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)}>View More</button>
+                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)} className='btn'>View More</button>
                 )}
             </div>
         </section>

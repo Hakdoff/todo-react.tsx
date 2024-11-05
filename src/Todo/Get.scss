@@ -21,6 +21,9 @@
     }
 
     &__sub-title {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 20% 0px 20%;
         font-size: 2rem;
         font-weight: 600;
         color: white;
@@ -256,11 +259,17 @@
     color: #007BFF;
     font-size: 1.2em;
     font-weight: bold;
+    color: #ab1668;
     margin: 5px;
     padding: 5px;
     border: none;
     background: none;
     cursor: pointer;
+}
+
+.react-calendar__month-view__weekdays {
+    text-align: center;
+    color: #ab1668;
 }
 
 .react-calendar__tile {
@@ -269,23 +278,25 @@
     padding: 10px;
     font-size: 1em;
     font-weight: 400;
-    color: #333;
+    color: #ab1668;
     transition: 0.3s ease;
 }
 
 .react-calendar__tile--active {
-    background-color: #007BFF;
-    color: black;
+    background-color: #FF87CA;
+    color: white;
 }
 
 .react-calendar__tile--now {
-    background-color: #fffae6;
-    border: 2px solid #007BFF;
+    background-color: #FF87CA;
+    border: 2px solid #ab1668;
+    color: white;
     font-weight: bold;
 }
 
 .react-calendar__tile:hover {
-    background-color: #e6f7ff;
+    background-color: white;
+    color: #ab1668;
 }
 
 .view_container {
@@ -300,4 +311,84 @@
     font-size: 1.2rem;
     font-weight: 600;
     padding: 1px 25px
+}
+
+.btn {
+    background-color: #ffffff00;
+    color: black;
+    width: 8.5em;
+    height: 2.9em;
+    border: #FF87CA 0.2em solid;
+    border-radius: 11px;
+    text-align: center;
+    transition: all 0.6s ease;
+  }
+  
+  .btn:hover {
+    background-color: #FF87CA;
+    color: white;
+    cursor: pointer;
+  }
+  
+  .btn svg {
+    width: 1.6em;
+    margin: -0.2em 0.8em 1em;
+    position: absolute;
+    display: flex;
+    transition: all 0.6s ease;
+  }
+  
+  .btn:hover svg {
+    transform: translateX(5px);
+  }
+  
+  .text {
+    margin: 0 1.5em
+  }
+
+  .btn-prev {
+    background-color: #ffffff00;
+    color: white;
+    width: 3.5em;
+    height: 2em;
+    border: white 0.1em solid;
+    border-radius: 11px;
+    text-align: center;
+    transition: all 0.6s ease;
+    font-size: 1.5rem;
+  }
+  
+  .btn-prev:hover {
+    background-color: white;
+    color: #FF87CA;
+    cursor: pointer;
+  }
+  
+  .btn-prev svg {
+    width: 1.6em;
+    margin: -0.2em 0.8em 1em;
+    position: absolute;
+    display: flex;
+    transition: all 0.6s ease;
+  }
+  
+  .btn-prev:hover svg {
+    transform: translateX(5px);
+  }
+  
+  .text {
+    margin: 0 1.5em
+  }
+  
+.btn-center {
+    display: flex;
+    justify-content: center;
+}
+
+i {
+    cursor: pointer;
+}
+
+i:hover {
+    transform: translateY(5px);
 }

@@ -7,7 +7,6 @@ import {
 } from "react-router-dom";
 import '../App.css';
 import Planner from "./Get";
-import PrevTasks from "./PrevTask";
 
 interface Todo {
   id: number;
@@ -46,12 +45,11 @@ function Todo() {
           path="/" 
           element={
             <Planner 
-              todos={todos} 
-              fetchTodos={fetchTodos}
+              // todos={todos} 
+              // fetchTodos={fetchTodos}
             />
           } 
         />
-        <Route path="/prev/todo/:id" element={<PrevTasks todos={todos} />} />
       </Routes>
     </Router>
   );

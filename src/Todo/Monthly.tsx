@@ -13,6 +13,8 @@ interface Monthly {
 function MonthlyList() {
     const [monthlys, setMonthlys] = useState<Monthly[]>([]);
     const [monthly, setMonthly] = useState<Monthly | null>(null);
+    const today = new Date();
+    const [displayedMonth, ] = useState(today)
     const initialItemsToShow = 6;
     const itemsIncrement = 6;
     const navigate = useNavigate();
@@ -21,7 +23,7 @@ function MonthlyList() {
 
     useEffect(() => {
         fetchMonthlys();
-    }, []);
+    }, [displayedMonth]);
 
     const fetchMonthlys = async () => {
         try {
@@ -35,7 +37,7 @@ function MonthlyList() {
             console.error("Error fetching data:", error);
         }
     };
-    const today = new Date();
+    
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
     today.setHours(0, 0, 0, 0);
@@ -58,6 +60,7 @@ function MonthlyList() {
         description: "",
         isCompleted: false,
         note: "",
+        createdAt: ""
     });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,24 +70,29 @@ function MonthlyList() {
             [name]: value,
         }));
     };
+    
     const handleAddMonthly = async (e: React.FormEvent) => {
         e.preventDefault();
+        const monthlyWithCreatedAt = {
+            ...newData,
+            createdAt: displayedMonth,
+        };
         try {
             const response = await fetch("https://localhost:7168/api/Monthly", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(newData),
+                body: JSON.stringify(monthlyWithCreatedAt),
             });
 
             if (!response.ok) {
                 throw new Error("Failed to add monthly");
             }
 
-            setNewData({ title: "", description: "", isCompleted: false, note: "" });
+            setNewData({ title: "", description: "", isCompleted: false, note: "", createdAt: "" });
             setAddModalOpen(false);
-            window.location.reload();
+            fetchMonthlys();
         } catch (error) {
             console.error("Error adding monthly:", error);
         }
@@ -138,7 +146,7 @@ function MonthlyList() {
                 setUpdateModalOpen(false);
                 setMonthly(null);
                 setSelectedMonthlyId(null);
-                window.location.reload();
+                fetchMonthlys();
             }
         } catch (error) {
             console.error("Error updating todo:", error);
@@ -230,7 +238,7 @@ function MonthlyList() {
     const handleViewTask = async (id: number) => {
         setSelectedMonthlyId(id);
         try {
-            const response = await fetch(`https://localhost:7168/api/Todo/${id}`);
+            const response = await fetch(`https://localhost:7168/api/Monthly/${id}`);
             if (!response.ok) {
                 throw new Error("Failed to fetch todo");
             }
@@ -267,8 +275,8 @@ function MonthlyList() {
                                         </div>
                                     </div>
                                     <div className="modal-footer">
-                                        <button type="submit" className="btn btn-primary" >Save changes</button>
-                                        <button type="button" className="btn btn-secondary" onClick={() => setAddModalOpen(false)}>Cancel</button>
+                                        <button type="submit" className="btn" >Add Task</button>
+                                        <button type="button" className="btn" onClick={() => setAddModalOpen(false)}>Cancel</button>
                                     </div>
                                 </form>
                             </div>
@@ -318,8 +326,8 @@ function MonthlyList() {
                                             </div>
                                         </div>
                                         <div className="modal-footer">
-                                            <button type="submit" className="btn btn-primary">Update Task</button>
-                                            <button type="button" className="btn btn-secondary" onClick={() => {
+                                            <button type="submit" className="btn">Update Task</button>
+                                            <button type="button" className="btn" onClick={() => {
                                                 setUpdateModalOpen(false); setMonthly(null);
                                                 setSelectedMonthlyId(null);
                                             }}>
@@ -428,7 +436,7 @@ function MonthlyList() {
                 )
                 }
                 {todayToShow < monthlyTasks.length && (
-                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)}>View More</button>
+                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)} className='btn'>View More</button>
                 )}
             </div>
         </section>

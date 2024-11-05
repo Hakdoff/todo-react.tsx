@@ -53,10 +53,12 @@ function NoteList() {
         )
     }
     );
+    const [displayedMonth, setDisplayedMonth] = useState(today)
 
     const [addModalOpen, setAddModalOpen] = useState(false);
     const [newData, setNewData] = useState({
         description: "",
+        createdAt: ""
     });
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,23 +68,27 @@ function NoteList() {
             [name]: value,
         }));
     };
+
     const handleAddNote = async (e: React.FormEvent) => {
         e.preventDefault();
+        const noteWithCreatedAt = {
+            ...newData,
+            createdAt: displayedMonth,
+        };
         try {
             const response = await fetch("https://localhost:7168/api/Note", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(newData),
+                body: JSON.stringify(noteWithCreatedAt),
             });
 
             if (!response.ok) {
                 throw new Error("Failed to add note");
             }
 
-            setNewData({ description: "" });
-            setAddModalOpen(false);
+            setNewData({ description: "", createdAt: "" });
             window.location.reload();
         } catch (error) {
             console.error("Error adding note:", error);
@@ -206,8 +212,8 @@ function NoteList() {
                                         </div>
                                     </div>
                                     <div className="modal-footer">
-                                        <button type="button" className="btn btn-secondary" onClick={() => setAddModalOpen(false)}>Cancel</button>
-                                        <button type="submit" className="btn btn-primary" >Save changes</button>
+                                        <button type="submit" className="btn" >Add Note</button>
+                                        <button type="button" className="btn" onClick={() => setAddModalOpen(false)}>Cancel</button>
                                     </div>
                                 </form>
                             </div>
@@ -276,7 +282,7 @@ function NoteList() {
                 )
                 }
                 {todayToShow < monthlyGoals.length && (
-                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)}>View More</button>
+                    <button onClick={() => setTodayToShow(prev => prev + itemsIncrement)} className='btn'>View More</button>
                 )}
             </div>
         </section >
